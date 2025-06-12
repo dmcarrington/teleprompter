@@ -9,7 +9,7 @@ import {
   Animated,
   Dimensions,
 } from 'react-native';
-import { CameraView, CameraType, useCameraPermissions, useMicrophonePermissions } from 'expo-camera';
+import { CameraView, CameraType, useCameraPermissions, useMicrophonePermissions, Camera, CameraRecordingOptions } from 'expo-camera';
 import * as MediaLibrary from 'expo-media-library';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from 'expo-router';
@@ -169,9 +169,10 @@ export default function TeleprompterScreen() {
       console.log('Starting camera recording...');
       
       // Start recording with a very simple approach
-      const video = await cameraRef.current.recordAsync({
-        maxDuration: 30, // Start with shorter duration for testing
-      });
+
+      const video = await cameraRef.current.recordAsync({codec: 'avc1', maxDuration: 60, maxFileSize: 100 * 1024 * 1024 /* 100 MB */});
+        //maxDuration: 30, // Start with shorter duration for testing
+    
       
       console.log('Recording completed:', video);
       stopRecordingTimer();
@@ -319,6 +320,7 @@ export default function TeleprompterScreen() {
       <View style={styles.floatingCameraContainer}>
         <CameraView
           key={cameraKey}
+          mode="video"
           style={styles.camera}
           facing="front"
           ref={cameraRef}
