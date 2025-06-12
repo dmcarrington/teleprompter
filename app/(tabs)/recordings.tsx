@@ -21,10 +21,93 @@ interface Recording {
   duration: number;
 }
 
+interface RecordingItemProps {
+  item: Recording;
+  isPlaying: boolean;
+  onTogglePlayback: () => void;
+  onDelete: () => void;
+  onStop: () => void;
+  formatDate: (timestamp: number) => string;
+  formatDuration: (duration: number) => string;
+}
+
+function RecordingItem({
+  item,
+  isPlaying,
+  onTogglePlayback,
+  onDelete,
+  onStop,
+  formatDate,
+  formatDuration,
+}: RecordingItemProps) {
+  return (
+    <ThemedView style={styles.recordingItem}>
+      <View style={styles.videoContainer}>
+        {isPlaying ? (
+          <Video
+            source={{ uri: item.uri }}
+            style={styles.video}
+            useNativeControls
+            resizeMode={ResizeMode.CONTAIN}
+            shouldPlay
+            onPlaybackStatusUpdate={(status: any) => {
+              if (status.isLoaded && status.didJustFinish) {
+                onStop();
+              }
+            }}
+          />
+        ) : (
+          <TouchableOpacity
+            style={styles.videoThumbnail}
+            onPress={onTogglePlayback}
+          >
+            <IconSymbol name="play.circle.fill" size={48} color="#007AFF" />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      <View style={styles.recordingInfo}>
+        <ThemedText style={styles.recordingTitle} numberOfLines={1}>
+          {item.filename}
+        </ThemedText>
+        <ThemedText style={styles.recordingMeta}>
+          {formatDate(item.creationTime)} • {formatDuration(item.duration)}
+        </ThemedText>
+      </View>
+
+      <View style={styles.recordingActions}>
+        {isPlaying ? (
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={onStop}
+          >
+            <IconSymbol name="stop.fill" size={20} color="#FF9500" />
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={onTogglePlayback}
+          >
+            <IconSymbol name="play.fill" size={20} color="#007AFF" />
+          </TouchableOpacity>
+        )}
+        
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={onDelete}
+        >
+          <IconSymbol name="trash" size={20} color="#FF3B30" />
+        </TouchableOpacity>
+      </View>
+    </ThemedView>
+  );
+}
+
 export default function RecordingsScreen() {
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [playingVideo, setPlayingVideo] = useState<string | null>(null);
+  const [videoPlayers, setVideoPlayers] = useState<{ [key: string]: any }>({});
 
   useEffect(() => {
     requestPermissionAndLoadRecordings();
@@ -109,65 +192,15 @@ export default function RecordingsScreen() {
   };
 
   const renderRecording = ({ item }: { item: Recording }) => (
-    <ThemedView style={styles.recordingItem}>
-      <View style={styles.videoContainer}>
-        {playingVideo === item.id ? (
-          <Video
-            source={{ uri: item.uri }}
-            style={styles.video}
-            useNativeControls
-            resizeMode={ResizeMode.CONTAIN}
-            shouldPlay
-            onPlaybackStatusUpdate={(status) => {
-              if (status.isLoaded && status.didJustFinish) {
-                setPlayingVideo(null);
-              }
-            }}
-          />
-        ) : (
-          <TouchableOpacity
-            style={styles.videoThumbnail}
-            onPress={() => togglePlayback(item.id)}
-          >
-            <IconSymbol name="play.circle.fill" size={48} color="#007AFF" />
-          </TouchableOpacity>
-        )}
-      </View>
-
-      <View style={styles.recordingInfo}>
-        <ThemedText style={styles.recordingTitle} numberOfLines={1}>
-          {item.filename}
-        </ThemedText>
-        <ThemedText style={styles.recordingMeta}>
-          {formatDate(item.creationTime)} • {formatDuration(item.duration)}
-        </ThemedText>
-      </View>
-
-      <View style={styles.recordingActions}>
-        {playingVideo === item.id ? (
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => setPlayingVideo(null)}
-          >
-            <IconSymbol name="stop.fill" size={20} color="#FF9500" />
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => togglePlayback(item.id)}
-          >
-            <IconSymbol name="play.fill" size={20} color="#007AFF" />
-          </TouchableOpacity>
-        )}
-        
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => deleteRecording(item.id)}
-        >
-          <IconSymbol name="trash" size={20} color="#FF3B30" />
-        </TouchableOpacity>
-      </View>
-    </ThemedView>
+    <RecordingItem
+      item={item}
+      isPlaying={playingVideo === item.id}
+      onTogglePlayback={() => togglePlayback(item.id)}
+      onDelete={() => deleteRecording(item.id)}
+      onStop={() => setPlayingVideo(null)}
+      formatDate={formatDate}
+      formatDuration={formatDuration}
+    />
   );
 
   if (hasPermission === null) {

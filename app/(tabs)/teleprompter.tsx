@@ -36,11 +36,17 @@ export default function TeleprompterScreen() {
   const [scrollSpeed, setScrollSpeed] = useState(2);
   const [fontSize, setFontSize] = useState(24);
   const [isScrolling, setIsScrolling] = useState(false);
+  const [cameraReady, setCameraReady] = useState(false);
+  const [recordingStatus, setRecordingStatus] = useState<string>('idle');
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [cameraKey, setCameraKey] = useState(0);
   
   const cameraRef = useRef<CameraView>(null);
   const scrollViewRef = useRef<ScrollView>(null);
   const scrollAnimation = useRef(new Animated.Value(0)).current;
   const scrollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const recordingStartTime = useRef<number>(0);
 
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [microphonePermission, requestMicrophonePermission] = useMicrophonePermissions();
@@ -55,13 +61,38 @@ export default function TeleprompterScreen() {
       if (scrollIntervalRef.current) {
         clearInterval(scrollIntervalRef.current);
       }
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+      }
     };
   }, []);
 
-  // Reload selected script when screen comes into focus
+  // Reload selected script and reset camera when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
       loadSelectedScript();
+      // Reset camera state when tab comes into focus
+      setCameraReady(false);
+      setRecordingStatus('idle');
+      setIsRecording(false);
+      setRecordingDuration(0);
+      
+      // Force camera remount by changing key
+      setCameraKey(prev => prev + 1);
+      
+      // Stop any ongoing recording timer
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+        recordingTimerRef.current = null;
+      }
+      
+      return () => {
+        // Cleanup when leaving the tab
+        if (recordingTimerRef.current) {
+          clearInterval(recordingTimerRef.current);
+          recordingTimerRef.current = null;
+        }
+      };
     }, [])
   );
 
@@ -86,30 +117,123 @@ export default function TeleprompterScreen() {
     }
   };
 
-  const startRecording = async () => {
-    if (!cameraRef.current) return;
-    
-    try {
-      setIsRecording(true);
-      const video = await cameraRef.current.recordAsync({
-        maxDuration: 600, // 10 minutes max
-      });
-      
-      if (video && hasMediaLibraryPermission) {
-        await MediaLibrary.saveToLibraryAsync(video.uri);
-        Alert.alert('Success', 'Video saved to gallery!');
-      }
-    } catch (error) {
-      console.error('Error recording video:', error);
-      Alert.alert('Error', 'Failed to record video');
-    } finally {
-      setIsRecording(false);
+  const onCameraReady = () => {
+    console.log('Camera is ready');
+    setCameraReady(true);
+  };
+
+  const startRecordingTimer = () => {
+    recordingStartTime.current = Date.now();
+    setRecordingDuration(0);
+    recordingTimerRef.current = setInterval(() => {
+      const elapsed = Date.now() - recordingStartTime.current;
+      setRecordingDuration(elapsed);
+    }, 100);
+  };
+
+  const stopRecordingTimer = () => {
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
     }
   };
 
-  const stopRecording = () => {
+  const startRecording = async () => {
+    console.log('=== Starting recording process ===');
+    
+    if (!cameraRef.current) {
+      Alert.alert('Error', 'Camera not ready');
+      return;
+    }
+    
+    if (!hasCameraPermission || !hasAudioPermission) {
+      Alert.alert('Error', 'Camera and microphone permissions required');
+      return;
+    }
+    
+    if (!hasMediaLibraryPermission) {
+      Alert.alert('Error', 'Media library permission required');
+      return;
+    }
+
+    if (!cameraReady) {
+      Alert.alert('Error', 'Camera is not ready. Please wait a moment and try again.');
+      return;
+    }
+    
+    try {
+      setIsRecording(true);
+      setRecordingStatus('recording');
+      startRecordingTimer();
+      
+      console.log('Starting camera recording...');
+      
+      // Start recording with a very simple approach
+      const video = await cameraRef.current.recordAsync({
+        maxDuration: 30, // Start with shorter duration for testing
+      });
+      
+      console.log('Recording completed:', video);
+      stopRecordingTimer();
+      setRecordingStatus('saving');
+      
+      if (video && video.uri) {
+        try {
+          await MediaLibrary.saveToLibraryAsync(video.uri);
+          console.log('Video saved successfully');
+          Alert.alert('Success', 'Video saved to gallery!');
+          setRecordingStatus('saved');
+        } catch (saveError) {
+          console.error('Error saving video:', saveError);
+          Alert.alert('Error', 'Failed to save video to gallery');
+          setRecordingStatus('error');
+        }
+      } else {
+        console.error('No video data received');
+        Alert.alert('Error', 'No video data was recorded');
+        setRecordingStatus('error');
+      }
+      
+      setIsRecording(false);
+      setRecordingDuration(0);
+      setTimeout(() => setRecordingStatus('idle'), 2000);
+      
+    } catch (error) {
+      console.error('Recording error:', error);
+      stopRecordingTimer();
+      
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error('Error details:', errorMessage);
+      
+      let userMessage = 'Failed to record video';
+      if (errorMessage.includes('stopped before any data')) {
+        userMessage = 'Recording failed - this may be a simulator limitation. Try on a real device.';
+      }
+      
+      Alert.alert('Recording Error', userMessage);
+      setIsRecording(false);
+      setRecordingDuration(0);
+      setRecordingStatus('error');
+      setTimeout(() => setRecordingStatus('idle'), 2000);
+    }
+  };
+
+  const stopRecording = async () => {
+    console.log('=== Stopping recording ===');
+    
     if (cameraRef.current && isRecording) {
-      cameraRef.current.stopRecording();
+      try {
+        console.log('Calling stopRecording on camera...');
+        await cameraRef.current.stopRecording();
+        console.log('Recording stopped successfully');
+      } catch (error) {
+        console.error('Error stopping recording:', error);
+        stopRecordingTimer();
+        setIsRecording(false);
+        setRecordingDuration(0);
+        setRecordingStatus('error');
+        setTimeout(() => setRecordingStatus('idle'), 2000);
+      }
     }
   };
 
@@ -194,16 +318,30 @@ export default function TeleprompterScreen() {
       {/* Floating Camera Preview - Portrait on Right Side */}
       <View style={styles.floatingCameraContainer}>
         <CameraView
+          key={cameraKey}
           style={styles.camera}
           facing="front"
           ref={cameraRef}
+          onCameraReady={onCameraReady}
         />
         <View style={styles.cameraOverlay}>
           <ThemedText style={styles.scriptTitle}>{selectedScript.title}</ThemedText>
+          
+          {/* Status indicator */}
+          {recordingStatus !== 'idle' && recordingStatus !== 'recording' && (
+            <View style={styles.statusIndicator}>
+              <ThemedText style={styles.statusText}>{recordingStatus.toUpperCase()}</ThemedText>
+            </View>
+          )}
+
+          {/* Recording indicator */}
           {isRecording && (
             <View style={styles.recordingIndicator}>
               <View style={styles.recordingDot} />
               <ThemedText style={styles.recordingText}>REC</ThemedText>
+              <ThemedText style={styles.recordingTime}>
+                {Math.floor(recordingDuration / 1000)}s
+              </ThemedText>
             </View>
           )}
         </View>
@@ -288,6 +426,7 @@ export default function TeleprompterScreen() {
             <TouchableOpacity
               style={[styles.controlButton, styles.recordButton]}
               onPress={startRecording}
+              disabled={recordingStatus !== 'idle'}
             >
               <IconSymbol name="record.circle" size={24} color="#fff" />
             </TouchableOpacity>
@@ -369,17 +508,37 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#fff',
   },
+  recordingTime: {
+    fontSize: 8,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginLeft: 4,
+  },
+  statusIndicator: {
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: 3,
+    alignSelf: 'center',
+  },
+  statusText: {
+    fontSize: 8,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
   scriptContainer: {
     flex: 1,
     paddingHorizontal: 20,
+    backgroundColor: '#000',
   },
   scriptContent: {
     paddingVertical: 20,
+    backgroundColor: '#000',
   },
   scriptText: {
     lineHeight: 36,
     textAlign: 'center',
-    color: '#000',
+    color: '#fff',
     fontSize: 24,
   },
   scriptPadding: {

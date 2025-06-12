@@ -13,6 +13,7 @@ export default function TabLayout() {
 
   return (
     <Tabs
+      initialRouteName="index"
       screenOptions={{
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
@@ -27,17 +28,17 @@ export default function TabLayout() {
         }),
       }}>
       <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Scripts',
+          tabBarIcon: ({ color }: { color: string }) => <IconSymbol size={28} name="doc.text.fill" color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="teleprompter"
         options={{
           title: 'Teleprompter',
           tabBarIcon: ({ color }: { color: string }) => <IconSymbol size={28} name="video.fill" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="scripts"
-        options={{
-          title: 'Scripts',
-          tabBarIcon: ({ color }: { color: string }) => <IconSymbol size={28} name="doc.text.fill" color={color} />,
         }}
       />
       <Tabs.Screen
