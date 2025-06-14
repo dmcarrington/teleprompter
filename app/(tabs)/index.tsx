@@ -11,6 +11,7 @@ import {
   ScrollView,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Image } from 'expo-image';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
@@ -166,7 +167,11 @@ export default function ScriptsScreen() {
       <View style={styles.header}>
         <ThemedText style={styles.headerTitle}>Scripts</ThemedText>
         <TouchableOpacity style={styles.addButton} onPress={createScript}>
-          <IconSymbol name="plus" size={24} color="#fff" />
+          <Image
+            source={require('@/assets/images/plus.svg')}
+            style={styles.plusIcon}
+            contentFit="contain"
+          />
         </TouchableOpacity>
       </View>
 
@@ -261,6 +266,11 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  plusIcon: {
+    width: 24,
+    height: 24,
+    tintColor: '#fff',
   },
   emptyState: {
     flex: 1,
