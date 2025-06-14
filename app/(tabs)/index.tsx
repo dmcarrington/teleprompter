@@ -308,6 +308,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     marginBottom: 4,
+    color: '#333',
   },
   scriptMeta: {
     fontSize: 12,

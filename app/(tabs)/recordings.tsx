@@ -350,6 +350,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 4,
+    color: '#333',
   },
   recordingMeta: {
     fontSize: 12,

@@ -9,6 +9,7 @@ import {
   Animated,
   Dimensions,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { CameraView, CameraType, useCameraPermissions, useMicrophonePermissions, Camera, CameraRecordingOptions } from 'expo-camera';
 import * as MediaLibrary from 'expo-media-library';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -398,7 +399,11 @@ export default function TeleprompterScreen() {
             style={styles.controlButton}
             onPress={resetScroll}
           >
-            <IconSymbol name="arrow.up" size={24} color="#007AFF" />
+            <Image
+                source={require('@/assets/images/home.svg')}
+                style={styles.recordIcon}
+                contentFit="contain"
+              />
           </TouchableOpacity>
 
           {isScrolling ? (
@@ -406,14 +411,22 @@ export default function TeleprompterScreen() {
               style={[styles.controlButton, styles.pauseButton]}
               onPress={stopAutoScroll}
             >
-              <IconSymbol name="pause.fill" size={24} color="#fff" />
+             <Image
+                source={require('@/assets/images/up-arrow.svg')}
+                style={styles.recordIcon}
+                contentFit="contain"
+              />
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
               style={[styles.controlButton, styles.playButton]}
               onPress={startAutoScroll}
             >
-              <IconSymbol name="play.fill" size={24} color="#fff" />
+              <Image
+                source={require('@/assets/images/up-arrow.svg')}
+                style={styles.recordIcon}
+                contentFit="contain"
+              />
             </TouchableOpacity>
           )}
 
@@ -422,7 +435,11 @@ export default function TeleprompterScreen() {
               style={[styles.controlButton, styles.stopButton]}
               onPress={stopRecording}
             >
-              <IconSymbol name="stop.fill" size={24} color="#fff" />
+              <Image
+                source={require('@/assets/images/video.svg')}
+                style={styles.recordIcon}
+                contentFit="contain"
+              />
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
@@ -430,7 +447,11 @@ export default function TeleprompterScreen() {
               onPress={startRecording}
               disabled={recordingStatus !== 'idle'}
             >
-              <IconSymbol name="record.circle" size={24} color="#fff" />
+             <Image
+                source={require('@/assets/images/video.svg')}
+                style={styles.recordIcon}
+                contentFit="contain"
+              />
             </TouchableOpacity>
           )}
         </View>
@@ -562,6 +583,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 8,
+    color: '#333',
   },
   settingButtons: {
     flexDirection: 'row',
@@ -586,6 +608,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     minWidth: 24,
     textAlign: 'center',
+    color: '#333',
   },
   mainControls: {
     flexDirection: 'row',
@@ -646,5 +669,10 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  recordIcon: {
+    width: 24,
+    height: 24,
+    tintColor: '#fff',
   },
 });
