@@ -17,6 +17,9 @@
       }
     },
     "production": {
+      "android": {
+        "image": "latest"
+      },
       "autoIncrement": true
     }
   },
