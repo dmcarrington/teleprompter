@@ -253,11 +253,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
-    paddingTop: 60,
+    paddingTop: 70,
+    paddingBottom: 25,
   },
   headerTitle: {
     fontSize: 32,
     fontWeight: 'bold',
+    padding:5,
   },
   addButton: {
     backgroundColor: '#007AFF',

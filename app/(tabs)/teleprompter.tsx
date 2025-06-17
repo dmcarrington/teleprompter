@@ -464,6 +464,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     position: 'relative',
+    paddingTop:60,
   },
   mainContent: {
     flex: 1,
@@ -471,7 +472,7 @@ const styles = StyleSheet.create({
   },
   floatingCameraContainer: {
     position: 'absolute',
-    top: 20,
+    top: 60,
     right: 20,
     width: 120,
     height: 160, // Portrait aspect ratio (3:4)
