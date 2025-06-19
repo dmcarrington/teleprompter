@@ -8,6 +8,7 @@ import {
   ScrollView,
   Animated,
   Dimensions,
+  PanResponder,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { CameraView, CameraType, useCameraPermissions, useMicrophonePermissions, Camera, CameraRecordingOptions } from 'expo-camera';
@@ -42,6 +43,11 @@ export default function TeleprompterScreen() {
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [cameraKey, setCameraKey] = useState(0);
   
+  // Camera position state for dragging
+  const [cameraPosition, setCameraPosition] = useState({ x: screenWidth - 140, y: 60 });
+  const cameraPositionRef = useRef(new Animated.ValueXY({ x: screenWidth - 140, y: 60 })).current;
+  const currentPosition = useRef({ x: screenWidth - 140, y: 60 });
+  
   const cameraRef = useRef<CameraView>(null);
   const scrollViewRef = useRef<ScrollView>(null);
   const scrollAnimation = useRef(new Animated.Value(0)).current;
@@ -51,6 +57,52 @@ export default function TeleprompterScreen() {
 
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [microphonePermission, requestMicrophonePermission] = useMicrophonePermissions();
+
+  // PanResponder for dragging the camera
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        // Use the current position from the ref instead of state
+        cameraPositionRef.setOffset({
+          x: currentPosition.current.x,
+          y: currentPosition.current.y,
+        });
+        cameraPositionRef.setValue({ x: 0, y: 0 });
+      },
+      onPanResponderMove: Animated.event(
+        [null, { dx: cameraPositionRef.x, dy: cameraPositionRef.y }],
+        { useNativeDriver: false }
+      ),
+      onPanResponderRelease: (evt, gestureState) => {
+        cameraPositionRef.flattenOffset();
+        
+        // Calculate new position with boundaries
+        const newX = Math.max(0, Math.min(screenWidth - 120, currentPosition.current.x + gestureState.dx));
+        const newY = Math.max(60, Math.min(screenHeight - 160 - 200, currentPosition.current.y + gestureState.dy)); // Account for controls at bottom
+        
+        // Update both state and ref
+        setCameraPosition({ x: newX, y: newY });
+        currentPosition.current = { x: newX, y: newY };
+        
+        Animated.spring(cameraPositionRef, {
+          toValue: { x: newX, y: newY },
+          useNativeDriver: false,
+        }).start();
+      },
+    })
+  ).current;
+
+  // Add listener to keep currentPosition in sync with animated value
+  useEffect(() => {
+    const listener = cameraPositionRef.addListener((value) => {
+      currentPosition.current = { x: value.x, y: value.y };
+    });
+
+    return () => {
+      cameraPositionRef.removeListener(listener);
+    };
+  }, []);
 
   useEffect(() => {
     requestPermissions();
@@ -317,8 +369,19 @@ export default function TeleprompterScreen() {
         </ScrollView>
       </View>
 
-      {/* Floating Camera Preview - Portrait on Right Side */}
-      <View style={styles.floatingCameraContainer}>
+      {/* Floating Camera Preview - Draggable */}
+      <Animated.View
+        style={[
+          styles.floatingCameraContainer,
+          {
+            transform: [
+              { translateX: cameraPositionRef.x },
+              { translateY: cameraPositionRef.y },
+            ],
+          },
+        ]}
+        {...panResponder.panHandlers}
+      >
         <CameraView
           key={cameraKey}
           mode="video"
@@ -348,7 +411,7 @@ export default function TeleprompterScreen() {
             </View>
           )}
         </View>
-      </View>
+      </Animated.View>
 
       {/* Controls */}
       <View style={styles.controlsContainer}>
@@ -468,12 +531,11 @@ const styles = StyleSheet.create({
   },
   mainContent: {
     flex: 1,
-    paddingRight: 140, // Make space for floating camera
   },
   floatingCameraContainer: {
     position: 'absolute',
-    top: 60,
-    right: 20,
+    top: 0,
+    left: 0,
     width: 120,
     height: 160, // Portrait aspect ratio (3:4)
     borderRadius: 12,
